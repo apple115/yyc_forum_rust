@@ -18,6 +18,8 @@ mod users;
 use sqlx::mysql::MySqlPoolOptions;
 use std::sync::Arc;
 use users::{login_handler, register_handler};
+mod comment;
+use comment::{get_comments_data_handler, push_comment_handler};
 
 async fn init_pool() -> sqlx::MySqlPool {
     let pool = MySqlPoolOptions::new()
@@ -48,6 +50,8 @@ async fn main() {
         .route("/pushpost", post(push_post_handler))
         .route("/posts", get(get_posts_data_handler))
         .route("/posts/:id", get(get_post_by_id_handler))
+        .route("/comments/:id", get(get_comments_data_handler))
+        .route("/comments", post(push_comment_handler))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

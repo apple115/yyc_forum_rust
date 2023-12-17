@@ -49,19 +49,25 @@ pub async fn register_handler(
     Json(request_body): Json<RequestRegister>,
 ) -> impl IntoResponse {
     // Access request body data
+    // userID 添加自增 找到mysql的最大id 然后+1
+    //
+    let user_id = sqlx::query_scalar("SELECT MAX(UserID) FROM Users")
+        .fetch_one(&*pool)
+        .await
+        .map_or(1, |max_id: Option<i32>| max_id.unwrap_or(0) + 1);
     let username = request_body.username;
     let password = request_body.password;
     let email = request_body.email;
+    let register_time = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let user_type = "User";
 
-    // Perform account registration logic here
+    //插入数据
+    let row = sqlx::query(
+        "INSERT INTO Users (UserID, Username, PasswordHash, Email, RegistrationTime, UserRole) VALUES (?,?,?,?,?,?)"
+        ).bind(user_id).bind(username).bind(password).bind(email).bind(register_time).bind(user_type)
+        .execute(&*pool)
+        .await.expect("Failed to insert data");
 
-    // For demonstration, just print the received data
-    println!(
-        "Received registration request - Username: {}, Password: {},email: {}",
-        username, password, email
-    );
-
-    // Respond with a success message (modify accordingly)
     (StatusCode::OK, "Registration successful")
 }
 

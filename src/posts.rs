@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
-    http::{HeaderValue, Request, Response, StatusCode},
-    response::{Html, IntoResponse},
+    http::StatusCode,
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
@@ -75,27 +75,35 @@ pub async fn get_post_by_id_handler(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequestPost {
     title: String,
-    author: String,
+    author_id: i32,
     body: String,
-    parent_id: i32,
+    post_type: String,
+    parent_id: Option<i32>,
 }
 
 //发布帖子
-pub async fn push_post_handler(Json(request_body): Json<RequestPost>) -> impl IntoResponse {
+pub async fn push_post_handler(
+    State(pool): State<Arc<sqlx::MySqlPool>>,
+    Json(request_body): Json<RequestPost>,
+) -> impl IntoResponse {
     // Access request body data
+    let post_id = sqlx::query_scalar("SELECT MAX(PostID) FROM Posts")
+        .fetch_one(&*pool)
+        .await
+        .map_or(1, |max_id: Option<i32>| max_id.unwrap_or(0) + 1);
     let title = request_body.title;
-    let author = request_body.author;
-    // let timestamp =
     let body = request_body.body;
-    // let post_type = request_body.post_type;
+    let author_id = request_body.author_id;
+    let published_at = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let status = "published";
+    let post_type = request_body.post_type;
     let parent_id = request_body.parent_id;
 
+    sqlx::query("insert into Posts(PostID,Title,Content,AuthorID,PublishedAt,Status,Type,ParentPostID) values(?,?,?,?,?,?,?,?)")
+        .bind(post_id).bind(title).bind(body).bind(author_id).bind(published_at).bind(status).bind(post_type).bind(parent_id)
+        .execute(&*pool).await.unwrap();
+
     // Perform account registration logic here
-    // For demonstration, just print the received data
-    println!(
-        "Received registration request - title: {}, author: {}, body: {}, parent_id: {}",
-        title, author, body, parent_id
-    );
     // Respond with a success message (modify accordingly)
     (StatusCode::OK, "Registration successful")
 }
