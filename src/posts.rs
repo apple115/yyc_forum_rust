@@ -51,7 +51,6 @@ pub async fn get_post_by_id_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let post_id = id;
-
     // Fetch the post with the specified ID (you need to implement the logic)
     let rows=sqlx::query("select PostID,Title,Username,DATE_FORMAT(PublishedAt, '%Y-%m-%d %H:%i:%s') as PublishedAt,Content,Type,ParentPostID from Posts,Users where Posts.AuthorID=Users.UserID and PostID=?")
         .bind(post_id)
@@ -67,7 +66,7 @@ pub async fn get_post_by_id_handler(
                     parent_id: row.get(6),
                 }}).fetch_all(&*pool).await.unwrap();
 
-    println!("{:#?}", rows);
+    // println!("{:#?}", rows);
 
     (StatusCode::OK, Json(rows))
 }
@@ -105,5 +104,5 @@ pub async fn push_post_handler(
 
     // Perform account registration logic here
     // Respond with a success message (modify accordingly)
-    (StatusCode::OK, "Registration successful")
+    (StatusCode::OK, "success")
 }

@@ -76,6 +76,7 @@ pub async fn register_handler(
 pub struct Returndata {
     useid: Option<i32>,
     username: Option<String>,
+    userrole: Option<String>,
 }
 
 pub async fn login_handler(
@@ -101,18 +102,18 @@ pub async fn login_handler(
     for user in users.iter() {
         if user.username == username && user.password == password {
             returndata = sqlx::query(
-                "SELECT UserID,UserRole FROM Users WHERE Username=? and PasswordHash=?",
+                "SELECT UserID,Username,UserRole FROM Users WHERE Username=? and PasswordHash=?",
             )
             .bind(username)
             .bind(password)
             .map(|map: sqlx::mysql::MySqlRow| Returndata {
                 useid: map.get(0),
                 username: map.get(1),
+                userrole: map.get(2),
             })
             .fetch_all(&*pool)
             .await
             .unwrap();
-            println!("Login successful");
 
             return (StatusCode::OK, Json(returndata));
         }
