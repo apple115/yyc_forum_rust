@@ -63,6 +63,8 @@ pub async fn push_comment_handler(
     (StatusCode::OK, "pushcommnet successful")
 }
 
+// TODO find every file
+
 pub async fn get_comments_data_handler(
     State(pool): State<Arc<sqlx::MySqlPool>>,
     Path(id): Path<i32>,

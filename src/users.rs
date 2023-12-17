@@ -38,6 +38,7 @@ pub struct RequestLogin {
     password: String,
 }
 
+#[derive(Debug, Deserialize)]
 pub struct login_data {
     username: String,
     password: String,
@@ -71,6 +72,12 @@ pub async fn register_handler(
     (StatusCode::OK, "Registration successful")
 }
 
+#[derive(Debug, Serialize)]
+pub struct Returndata {
+    useid: Option<i32>,
+    username: Option<String>,
+}
+
 pub async fn login_handler(
     State(pool): State<Arc<sqlx::MySqlPool>>,
     Json(request_body): Json<RequestLogin>,
@@ -87,16 +94,28 @@ pub async fn login_handler(
         .await
         .unwrap();
 
-    // println!("{:#?}", Users);
-
     let username = request_body.username;
     let password = request_body.password;
     //如果用户名密码处于login data中，则返回成功
-    for user in users {
+    let mut returndata = Vec::new();
+    for user in users.iter() {
         if user.username == username && user.password == password {
-            return (StatusCode::OK, "Login successful");
+            returndata = sqlx::query(
+                "SELECT UserID,UserRole FROM Users WHERE Username=? and PasswordHash=?",
+            )
+            .bind(username)
+            .bind(password)
+            .map(|map: sqlx::mysql::MySqlRow| Returndata {
+                useid: map.get(0),
+                username: map.get(1),
+            })
+            .fetch_all(&*pool)
+            .await
+            .unwrap();
+            println!("Login successful");
+
+            return (StatusCode::OK, Json(returndata));
         }
-        return (StatusCode::OK, "Login failed");
     }
-    return (StatusCode::OK, "Login failed");
+    return (StatusCode::OK, Json(returndata));
 }
