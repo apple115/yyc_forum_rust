@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Users {
     id: i32,
     username: String,
@@ -119,4 +119,26 @@ pub async fn login_handler(
         }
     }
     return (StatusCode::OK, Json(returndata));
+}
+
+pub async fn get_users_data_handler(State(pool): State<Arc<sqlx::MySqlPool>>) -> impl IntoResponse {
+    let users = sqlx::query(
+        "select UserId,Username,PasswordHash,Email,
+        DATE_FORMAT(RegistrationTime, '%Y-%m-%d %H:%i:%s') as RegistrationTime,
+        UserRole
+        from Users",
+    )
+    .map(|row: sqlx::mysql::MySqlRow| Users {
+        id: row.get(0),
+        username: row.get(1),
+        password: row.get(2),
+        email: row.get(3),
+        register_time: row.get(4),
+        user_type: row.get(5),
+    })
+    .fetch_all(&*pool)
+    .await
+    .unwrap();
+
+    (StatusCode::OK, Json(users))
 }
