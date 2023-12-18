@@ -106,3 +106,34 @@ pub async fn push_post_handler(
     // Respond with a success message (modify accordingly)
     (StatusCode::OK, "success")
 }
+
+pub async fn search_author_post_handler(
+    State(pool): State<Arc<sqlx::MySqlPool>>,
+    Path(Authorname): Path<String>,
+) -> impl IntoResponse {
+    let author_name = Authorname;
+
+    let rows = sqlx::query(
+        "select PostID,Title,Username,DATE_FORMAT(PublishedAt, '%Y-%m-%d %H:%i:%s') as PublishedAt,
+                         Content,Type,ParentPostID 
+                         from Posts,Users
+                         where Posts.AuthorID=Users.UserID and Users.Username=?",
+    )
+    .bind(author_name)
+    .map(|row: sqlx::mysql::MySqlRow| Post {
+        id: row.get(0),
+        title: row.get(1),
+        author: row.get(2),
+        timestamp: row.get(3),
+        body: row.get(4),
+        post_type: row.get(5),
+        parent_id: row.get(6),
+    })
+    .fetch_all(&*pool)
+    .await
+    .unwrap();
+
+    // println!("{:#?}", rows);
+
+    (StatusCode::OK, Json(rows))
+}
